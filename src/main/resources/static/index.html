@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TODO-лист</title>
+
+    <!-- Pico.css — минималистичный CSS-фреймворк (одна строка CDN) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+
+    <style>
+        :root {
+            --pico-font-size: 15px;
+        }
+
+        body {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .grid-two {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        @media (max-width: 900px) {
+            .grid-two {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .task-card {
+            border: 1px solid var(--pico-muted-border-color);
+            border-radius: var(--pico-border-radius);
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            background: var(--pico-card-background-color);
+        }
+
+        .task-card.done {
+            opacity: 0.6;
+        }
+
+        .task-card.overdue {
+            border-left: 4px solid #e53935;
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .task-title {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 600;
+        }
+
+        .task-meta {
+            font-size: 0.85rem;
+            color: var(--pico-muted-color);
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-top: 0.5rem;
+        }
+
+        .task-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+            margin-top: 0.5rem;
+        }
+
+        .tag {
+            font-size: 0.75rem;
+            padding: 0.1rem 0.5rem;
+            border-radius: 1rem;
+            background: var(--pico-primary-focus);
+            color: var(--pico-primary-inverse);
+        }
+
+        .badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+        }
+
+        .badge-TODO         { background: #e3f2fd; color: #0d47a1; }
+        .badge-IN_PROGRESS  { background: #fff3e0; color: #e65100; }
+        .badge-DONE         { background: #e8f5e9; color: #1b5e20; }
+        .badge-CANCELLED    { background: #fce4ec; color: #880e4f; }
+
+        .badge-LOW      { background: #eceff1; color: #37474f; }
+        .badge-MEDIUM   { background: #e3f2fd; color: #0d47a1; }
+        .badge-HIGH     { background: #fff8e1; color: #f57f17; }
+        .badge-URGENT   { background: #ffebee; color: #b71c1c; }
+
+        .task-actions {
+            display: flex;
+            gap: 0.25rem;
+            align-items: center;
+        }
+
+        .task-actions button {
+            margin: 0;
+            padding: 0.3rem 0.7rem;
+            font-size: 0.8rem;
+        }
+
+        .filters {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--pico-muted-color);
+        }
+
+        .loader {
+            text-align: center;
+            padding: 2rem;
+            color: var(--pico-muted-color);
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+        }
+
+        .pagination button {
+            margin: 0;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            z-index: 9999;
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.success { background: #2e7d32; color: white; }
+        .toast.error   { background: #c62828; color: white; }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to   { transform: translateX(0);    opacity: 1; }
+        }
+
+        details summary {
+            cursor: pointer;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>📝 TODO-лист</h1>
+    <button id="refresh-btn" class="secondary" style="width: auto;">🔄 Обновить</button>
+</header>
+
+<div class="grid-two">
+
+    <!-- ================================================
+         ЛЕВАЯ КОЛОНКА: Форма создания + Фильтры
+         ================================================ -->
+    <aside>
+        <article>
+            <header><strong>Новая задача</strong></header>
+            <form id="create-form">
+                <input type="text" id="f-title" placeholder="Заголовок *" required maxlength="200">
+                <textarea id="f-description" placeholder="Описание" rows="2" maxlength="2000"></textarea>
+
+                <select id="f-priority" required>
+                    <option value="LOW">Низкий</option>
+                    <option value="MEDIUM" selected>Средний</option>
+                    <option value="HIGH">Высокий</option>
+                    <option value="URGENT">Срочный</option>
+                </select>
+
+                <input type="date" id="f-due-date" placeholder="Дедлайн">
+
+                <input type="text" id="f-tags" placeholder="Теги через запятую: home, work">
+
+                <button type="submit">➕ Создать задачу</button>
+            </form>
+        </article>
+
+        <article>
+            <header><strong>Фильтры</strong></header>
+            <div class="filters">
+                <select id="f-filter-status">
+                    <option value="">Все статусы</option>
+                    <option value="TODO">TODO</option>
+                    <option value="IN_PROGRESS">В работе</option>
+                    <option value="DONE">Выполнено</option>
+                    <option value="CANCELLED">Отменено</option>
+                </select>
+
+                <select id="f-filter-priority">
+                    <option value="">Все приоритеты</option>
+                    <option value="LOW">Низкий</option>
+                    <option value="MEDIUM">Средний</option>
+                    <option value="HIGH">Высокий</option>
+                    <option value="URGENT">Срочный</option>
+                </select>
+
+                <input type="text" id="f-filter-tag" placeholder="Тег">
+                <input type="text" id="f-filter-search" placeholder="Поиск">
+            </div>
+
+            <label style="margin-top: 0.5rem;">
+                <input type="checkbox" id="f-filter-overdue">
+                Только просроченные
+            </label>
+
+            <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                <button id="apply-filters-btn" style="flex: 1;">Применить</button>
+                <button id="reset-filters-btn" class="secondary" style="flex: 1;">Сбросить</button>
+            </div>
+        </article>
+    </aside>
+
+    <!-- ================================================
+         ПРАВАЯ КОЛОНКА: Список задач
+         ================================================ -->
+    <main>
+        <div id="loading" class="loader" style="display:none;">Загрузка...</div>
+        <div id="empty" class="empty-state" style="display:none;">
+            <p>Задач пока нет. Создайте первую! 🚀</p>
+        </div>
+        <div id="task-list"></div>
+
+        <div class="pagination" id="pagination" style="display:none;">
+            <button id="prev-btn" class="secondary" style="width: auto;">← Назад</button>
+            <span id="page-info"></span>
+            <button id="next-btn" class="secondary" style="width: auto;">Вперёд →</button>
+        </div>
+    </main>
+
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

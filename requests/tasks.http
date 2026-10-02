@@ -1,0 +1,87 @@
+@host = http://localhost:8080
+
+### 1. Создание задачи
+POST {{host}}/api/tasks
+Content-Type: application/json
+
+{
+  "title": "Buy milk",
+  "description": "2% fat",
+  "priority": "MEDIUM",
+  "due_date": "2026-10-15",
+  "tags": ["shopping", "home"]
+}
+
+### 2. Получение по id (замени 1 на реальный id)
+GET {{host}}/api/tasks/1
+
+### 3. Список с пагинацией
+GET {{host}}/api/tasks?page=0&size=10&sortBy=id&sortDir=asc
+
+### 4. Список с сортировкой по приоритету
+GET {{host}}/api/tasks?sortBy=priority&sortDir=desc
+
+### 5. Частичное обновление — только title
+PATCH {{host}}/api/tasks/1
+Content-Type: application/json
+
+{
+  "title": "Buy milk and bread"
+}
+
+### 6. Смена статуса — TODO → IN_PROGRESS
+PATCH {{host}}/api/tasks/1/status
+Content-Type: application/json
+
+{
+  "status": "IN_PROGRESS"
+}
+
+### 7. Смена статуса — IN_PROGRESS → DONE
+PATCH {{host}}/api/tasks/1/status
+Content-Type: application/json
+
+{
+  "status": "DONE"
+}
+
+### 8. Невалидный переход — DONE → TODO (409 или 422)
+PATCH {{host}}/api/tasks/1/status
+Content-Type: application/json
+
+{
+  "status": "TODO"
+}
+
+### 9. Удаление
+DELETE {{host}}/api/tasks/1
+
+### 10. Задача не найдена — 404
+GET {{host}}/api/tasks/9999
+
+### 11. Валидация — пустой title — 422
+POST {{host}}/api/tasks
+Content-Type: application/json
+
+{
+  "title": "",
+  "priority": "LOW"
+}
+
+### 12. Валидация — неверный enum — 400
+POST {{host}}/api/tasks
+Content-Type: application/json
+
+{
+  "title": "Valid",
+  "priority": "INVALID"
+}
+
+### 13. Валидация — page < 0 — 422
+GET {{host}}/api/tasks?page=-1
+
+### 14. Валидация — size > 100 — 422
+GET {{host}}/api/tasks?size=500
+
+### 15. Валидация — sortBy не из whitelist — 422
+GET {{host}}/api/tasks?sortBy=malicious
